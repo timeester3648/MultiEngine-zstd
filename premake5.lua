@@ -9,9 +9,9 @@ project "zstd"
 	inlining "Auto"
 
 	files {
-		"./**.h",
-		"./**.c",
-		"./**.cpp"
+		"./lib/**.h",
+		"./lib/**.c",
+		"./lib/**.cpp"
 	}
 
 	defines {
