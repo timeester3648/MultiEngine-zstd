@@ -53,3 +53,9 @@ compile_commands.json
 .clangd
 perf.data
 perf.data.old
+
+# exclude project files
+**.sln
+**.vcxproj
+**.vcxproj.user
+**.vcxproj.filters
