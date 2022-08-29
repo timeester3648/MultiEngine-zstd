@@ -145,6 +145,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="lib\common\bits.h" />
     <ClInclude Include="lib\common\bitstream.h" />
     <ClInclude Include="lib\common\compiler.h" />
     <ClInclude Include="lib\common\cpu.h" />
@@ -154,11 +155,13 @@
     <ClInclude Include="lib\common\huf.h" />
     <ClInclude Include="lib\common\mem.h" />
     <ClInclude Include="lib\common\pool.h" />
+    <ClInclude Include="lib\common\portability_macros.h" />
     <ClInclude Include="lib\common\threading.h" />
     <ClInclude Include="lib\common\xxhash.h" />
     <ClInclude Include="lib\common\zstd_deps.h" />
-    <ClInclude Include="lib\common\zstd_errors.h" />
     <ClInclude Include="lib\common\zstd_internal.h" />
+    <ClInclude Include="lib\common\zstd_trace.h" />
+    <ClInclude Include="lib\compress\clevels.h" />
     <ClInclude Include="lib\compress\hist.h" />
     <ClInclude Include="lib\compress\zstd_compress_internal.h" />
     <ClInclude Include="lib\compress\zstd_compress_literals.h" />
@@ -169,6 +172,7 @@
     <ClInclude Include="lib\compress\zstd_fast.h" />
     <ClInclude Include="lib\compress\zstd_lazy.h" />
     <ClInclude Include="lib\compress\zstd_ldm.h" />
+    <ClInclude Include="lib\compress\zstd_ldm_geartab.h" />
     <ClInclude Include="lib\compress\zstd_opt.h" />
     <ClInclude Include="lib\compress\zstdmt_compress.h" />
     <ClInclude Include="lib\decompress\zstd_ddict.h" />
@@ -177,7 +181,6 @@
     <ClInclude Include="lib\deprecated\zbuff.h" />
     <ClInclude Include="lib\dictBuilder\cover.h" />
     <ClInclude Include="lib\dictBuilder\divsufsort.h" />
-    <ClInclude Include="lib\dictBuilder\zdict.h" />
     <ClInclude Include="lib\legacy\zstd_legacy.h" />
     <ClInclude Include="lib\legacy\zstd_v01.h" />
     <ClInclude Include="lib\legacy\zstd_v02.h" />
@@ -186,7 +189,9 @@
     <ClInclude Include="lib\legacy\zstd_v05.h" />
     <ClInclude Include="lib\legacy\zstd_v06.h" />
     <ClInclude Include="lib\legacy\zstd_v07.h" />
+    <ClInclude Include="lib\zdict.h" />
     <ClInclude Include="lib\zstd.h" />
+    <ClInclude Include="lib\zstd_errors.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lib\common\debug.c" />

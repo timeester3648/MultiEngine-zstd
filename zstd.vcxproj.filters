@@ -21,6 +21,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="lib\common\bits.h">
+      <Filter>common</Filter>
+    </ClInclude>
     <ClInclude Include="lib\common\bitstream.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -48,6 +51,9 @@
     <ClInclude Include="lib\common\pool.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="lib\common\portability_macros.h">
+      <Filter>common</Filter>
+    </ClInclude>
     <ClInclude Include="lib\common\threading.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -57,11 +63,14 @@
     <ClInclude Include="lib\common\zstd_deps.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="lib\common\zstd_errors.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="lib\common\zstd_internal.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\common\zstd_trace.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\compress\clevels.h">
+      <Filter>compress</Filter>
     </ClInclude>
     <ClInclude Include="lib\compress\hist.h">
       <Filter>compress</Filter>
@@ -93,6 +102,9 @@
     <ClInclude Include="lib\compress\zstd_ldm.h">
       <Filter>compress</Filter>
     </ClInclude>
+    <ClInclude Include="lib\compress\zstd_ldm_geartab.h">
+      <Filter>compress</Filter>
+    </ClInclude>
     <ClInclude Include="lib\compress\zstd_opt.h">
       <Filter>compress</Filter>
     </ClInclude>
@@ -115,9 +127,6 @@
       <Filter>dictBuilder</Filter>
     </ClInclude>
     <ClInclude Include="lib\dictBuilder\divsufsort.h">
-      <Filter>dictBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\dictBuilder\zdict.h">
       <Filter>dictBuilder</Filter>
     </ClInclude>
     <ClInclude Include="lib\legacy\zstd_legacy.h">
@@ -144,7 +153,9 @@
     <ClInclude Include="lib\legacy\zstd_v07.h">
       <Filter>legacy</Filter>
     </ClInclude>
+    <ClInclude Include="lib\zdict.h" />
     <ClInclude Include="lib\zstd.h" />
+    <ClInclude Include="lib\zstd_errors.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lib\common\debug.c">
