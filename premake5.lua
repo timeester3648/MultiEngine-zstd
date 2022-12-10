@@ -19,7 +19,7 @@ project "zstd"
 		"ZSTD_LEGACY_SUPPORT=5"
 	}
 
-	filter "action:vs*"
+	filter "toolset:msc"
 		disablewarnings { "4244" }
 
  	filter "system:windows"
