@@ -1,5 +1,5 @@
 # ################################################################
-# Copyright (c) Yann Collet, Facebook, Inc.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
 # This source code is licensed under both the BSD-style license (found in the
@@ -276,7 +276,7 @@ generate_res: $(RES64_FILE) $(RES32_FILE)
 
 ifneq (,$(filter Windows%,$(OS)))
 RC ?= windres
-# http://stackoverflow.com/questions/708238/how-do-i-add-an-icon-to-a-mingw-gcc-compiled-executable
+# https://stackoverflow.com/questions/708238/how-do-i-add-an-icon-to-a-mingw-gcc-compiled-executable
 $(RES64_FILE): windres/zstd.rc
 	$(RC) -o $@ -I ../lib -I windres -i $< -O coff -F pe-x86-64
 $(RES32_FILE): windres/zstd.rc
