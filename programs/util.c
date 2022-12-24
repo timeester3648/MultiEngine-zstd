@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Przemyslaw Skibinski, Yann Collet, Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
@@ -286,6 +286,34 @@ int UTIL_isLink(const char* infilename)
 #endif
     (void)infilename;
     return 0;
+}
+
+static int g_fakeStdinIsConsole = 0;
+static int g_fakeStderrIsConsole = 0;
+static int g_fakeStdoutIsConsole = 0;
+
+int UTIL_isConsole(FILE* file)
+{
+    if (file == stdin && g_fakeStdinIsConsole)
+        return 1;
+    if (file == stderr && g_fakeStderrIsConsole)
+        return 1;
+    if (file == stdout && g_fakeStdoutIsConsole)
+        return 1;
+    return IS_CONSOLE(file);
+}
+
+void UTIL_fakeStdinIsConsole(void)
+{
+    g_fakeStdinIsConsole = 1;
+}
+void UTIL_fakeStdoutIsConsole(void)
+{
+    g_fakeStdoutIsConsole = 1;
+}
+void UTIL_fakeStderrIsConsole(void)
+{
+    g_fakeStderrIsConsole = 1;
 }
 
 U64 UTIL_getFileSize(const char* infilename)
