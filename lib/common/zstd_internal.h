@@ -28,7 +28,6 @@
 #include "../zstd.h"
 #define FSE_STATIC_LINKING_ONLY
 #include "fse.h"
-#define HUF_STATIC_LINKING_ONLY
 #include "huf.h"
 #ifndef XXH_STATIC_LINKING_ONLY
 #  define XXH_STATIC_LINKING_ONLY  /* XXH64_state_t */
@@ -341,6 +340,7 @@ MEM_STATIC ZSTD_sequenceLength ZSTD_getSequenceLength(seqStore_t const* seqStore
  *          `decompressedBound != ZSTD_CONTENTSIZE_ERROR`
  */
 typedef struct {
+    size_t nbBlocks;
     size_t compressedSize;
     unsigned long long decompressedBound;
 } ZSTD_frameSizeInfo;   /* decompress & legacy */

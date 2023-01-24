@@ -150,6 +150,12 @@ typedef struct {
   size_t capacity;      /* The capacity starting from `seq` pointer */
 } rawSeqStore_t;
 
+typedef struct {
+    U32 idx;            /* Index in array of ZSTD_Sequence */
+    U32 posInSequence;  /* Position within sequence at idx */
+    size_t posInSrc;    /* Number of bytes given by sequences provided so far */
+} ZSTD_sequencePosition;
+
 UNUSED_ATTR static const rawSeqStore_t kNullRawSeqStore = {NULL, 0, 0, 0, 0};
 
 typedef struct {
@@ -340,6 +346,18 @@ struct ZSTD_CCtx_params_s {
 
     /* Controls prefetching in some dictMatchState matchfinders */
     ZSTD_paramSwitch_e prefetchCDictTables;
+
+    /* Controls whether zstd will fall back to an internal matchfinder
+     * if the external matchfinder returns an error code. */
+    int enableMatchFinderFallback;
+
+    /* Indicates whether an external matchfinder has been referenced.
+     * Users can't set this externally.
+     * It is set internally in ZSTD_registerExternalMatchFinder(). */
+    int useExternalMatchFinder;
+
+    /* Adjust the max block size*/
+    size_t maxBlockSize;
 };  /* typedef'd to ZSTD_CCtx_params within "zstd.h" */
 
 #define COMPRESS_SEQUENCES_WORKSPACE_SIZE (sizeof(unsigned) * (MaxSeq + 2))
@@ -370,6 +388,14 @@ typedef struct {
     U32 partitions[ZSTD_MAX_NB_BLOCK_SPLITS];
     ZSTD_entropyCTablesMetadata_t entropyMetadata;
 } ZSTD_blockSplitCtx;
+
+/* Context for block-level external matchfinder API */
+typedef struct {
+  void* mState;
+  ZSTD_externalMatchFinder_F* mFinder;
+  ZSTD_Sequence* seqBuffer;
+  size_t seqBufferCapacity;
+} ZSTD_externalMatchCtx;
 
 struct ZSTD_CCtx_s {
     ZSTD_compressionStage_e stage;
@@ -440,6 +466,9 @@ struct ZSTD_CCtx_s {
 
     /* Workspace for block splitter */
     ZSTD_blockSplitCtx blockSplitCtx;
+
+    /* Workspace for external matchfinder */
+    ZSTD_externalMatchCtx externalMatchCtx;
 };
 
 typedef enum { ZSTD_dtlm_fast, ZSTD_dtlm_full } ZSTD_dictTableLoadMethod_e;
@@ -465,7 +494,7 @@ typedef enum {
                                  * In this mode we take both the source size and the dictionary size
                                  * into account when selecting and adjusting the parameters.
                                  */
-    ZSTD_cpm_unknown = 3,       /* ZSTD_getCParams, ZSTD_getParams, ZSTD_adjustParams.
+    ZSTD_cpm_unknown = 3        /* ZSTD_getCParams, ZSTD_getParams, ZSTD_adjustParams.
                                  * We don't know what these parameters are for. We default to the legacy
                                  * behavior of taking both the source size and the dict size into account
                                  * when selecting and adjusting parameters.
@@ -556,7 +585,7 @@ MEM_STATIC size_t ZSTD_minGain(size_t srcSize, ZSTD_strategy strat)
 {
     U32 const minlog = (strat>=ZSTD_btultra) ? (U32)(strat) - 1 : 6;
     ZSTD_STATIC_ASSERT(ZSTD_btultra == 8);
-    assert(ZSTD_cParam_withinBounds(ZSTD_c_strategy, strat));
+    assert(ZSTD_cParam_withinBounds(ZSTD_c_strategy, (int)strat));
     return (srcSize >> minlog) + 2;
 }
 
@@ -1143,10 +1172,15 @@ ZSTD_checkDictValidity(const ZSTD_window_t* window,
                     (unsigned)blockEndIdx, (unsigned)maxDist, (unsigned)loadedDictEnd);
         assert(blockEndIdx >= loadedDictEnd);
 
-        if (blockEndIdx > loadedDictEnd + maxDist) {
+        if (blockEndIdx > loadedDictEnd + maxDist || loadedDictEnd != window->dictLimit) {
             /* On reaching window size, dictionaries are invalidated.
              * For simplification, if window size is reached anywhere within next block,
              * the dictionary is invalidated for the full block.
+             *
+             * We also have to invalidate the dictionary if ZSTD_window_update() has detected
+             * non-contiguous segments, which means that loadedDictEnd != window->dictLimit.
+             * loadedDictEnd may be 0, if forceWindow is true, but in that case we never use
+             * dictMatchState, so setting it to NULL is not a problem.
              */
             DEBUGLOG(6, "invalidating dictionary for current block (distance > windowSize)");
             *loadedDictEndPtr = 0;
@@ -1410,5 +1444,32 @@ U32 ZSTD_cycleLog(U32 hashLog, ZSTD_strategy strat);
  *  Trace the end of a compression call.
  */
 void ZSTD_CCtx_trace(ZSTD_CCtx* cctx, size_t extraCSize);
+
+/* Returns 0 on success, and a ZSTD_error otherwise. This function scans through an array of
+ * ZSTD_Sequence, storing the sequences it finds, until it reaches a block delimiter.
+ * Note that the block delimiter must include the last literals of the block.
+ */
+size_t
+ZSTD_copySequencesToSeqStoreExplicitBlockDelim(ZSTD_CCtx* cctx,
+                                              ZSTD_sequencePosition* seqPos,
+                                        const ZSTD_Sequence* const inSeqs, size_t inSeqsSize,
+                                        const void* src, size_t blockSize);
+
+/* Returns the number of bytes to move the current read position back by.
+ * Only non-zero if we ended up splitting a sequence.
+ * Otherwise, it may return a ZSTD error if something went wrong.
+ *
+ * This function will attempt to scan through blockSize bytes
+ * represented by the sequences in @inSeqs,
+ * storing any (partial) sequences.
+ *
+ * Occasionally, we may want to change the actual number of bytes we consumed from inSeqs to
+ * avoid splitting a match, or to avoid splitting a match such that it would produce a match
+ * smaller than MINMATCH. In this case, we return the number of bytes that we didn't read from this block.
+ */
+size_t
+ZSTD_copySequencesToSeqStoreNoBlockDelim(ZSTD_CCtx* cctx, ZSTD_sequencePosition* seqPos,
+                                   const ZSTD_Sequence* const inSeqs, size_t inSeqsSize,
+                                   const void* src, size_t blockSize);
 
 #endif /* ZSTD_COMPRESS_H */
