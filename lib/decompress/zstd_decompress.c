@@ -55,6 +55,7 @@
 /*-*******************************************************
 *  Dependencies
 *********************************************************/
+#include "../common/allocations.h"  /* ZSTD_customMalloc, ZSTD_customCalloc, ZSTD_customFree */
 #include "../common/zstd_deps.h"   /* ZSTD_memcpy, ZSTD_memmove, ZSTD_memset */
 #include "../common/mem.h"         /* low level memory routines */
 #define FSE_STATIC_LINKING_ONLY
@@ -243,6 +244,7 @@ static void ZSTD_DCtx_resetParameters(ZSTD_DCtx* dctx)
     dctx->outBufferMode = ZSTD_bm_buffered;
     dctx->forceIgnoreChecksum = ZSTD_d_validateChecksum;
     dctx->refMultipleDDicts = ZSTD_rmd_refSingleDDict;
+    dctx->disableHufAsm = 0;
 }
 
 static void ZSTD_initDCtx_internal(ZSTD_DCtx* dctx)
@@ -1811,6 +1813,11 @@ ZSTD_bounds ZSTD_dParam_getBounds(ZSTD_dParameter dParam)
             bounds.lowerBound = (int)ZSTD_rmd_refSingleDDict;
             bounds.upperBound = (int)ZSTD_rmd_refMultipleDDicts;
             return bounds;
+        case ZSTD_d_disableHuffmanAssembly:
+            bounds.lowerBound = 0;
+            bounds.upperBound = 1;
+            return bounds;
+
         default:;
     }
     bounds.error = ERROR(parameter_unsupported);
@@ -1851,6 +1858,9 @@ size_t ZSTD_DCtx_getParameter(ZSTD_DCtx* dctx, ZSTD_dParameter param, int* value
         case ZSTD_d_refMultipleDDicts:
             *value = (int)dctx->refMultipleDDicts;
             return 0;
+        case ZSTD_d_disableHuffmanAssembly:
+            *value = (int)dctx->disableHufAsm;
+            return 0;
         default:;
     }
     RETURN_ERROR(parameter_unsupported, "");
@@ -1883,6 +1893,10 @@ size_t ZSTD_DCtx_setParameter(ZSTD_DCtx* dctx, ZSTD_dParameter dParam, int value
                 RETURN_ERROR(parameter_unsupported, "Static dctx does not support multiple DDicts!");
             }
             dctx->refMultipleDDicts = (ZSTD_refMultipleDDicts_e)value;
+            return 0;
+        case ZSTD_d_disableHuffmanAssembly:
+            CHECK_DBOUNDS(ZSTD_d_disableHuffmanAssembly, value);
+            dctx->disableHufAsm = value != 0;
             return 0;
         default:;
     }
@@ -2225,7 +2239,7 @@ size_t ZSTD_decompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output, ZSTD_inB
                 int const isSkipFrame = ZSTD_isSkipFrame(zds);
                 size_t loadedSize;
                 /* At this point we shouldn't be decompressing a block that we can stream. */
-                assert(neededInSize == ZSTD_nextSrcSizeToDecompressWithInputSize(zds, iend - ip));
+                assert(neededInSize == ZSTD_nextSrcSizeToDecompressWithInputSize(zds, (size_t)(iend - ip)));
                 if (isSkipFrame) {
                     loadedSize = MIN(toLoad, (size_t)(iend-ip));
                 } else {
@@ -2285,8 +2299,8 @@ size_t ZSTD_decompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output, ZSTD_inB
     if ((ip==istart) && (op==ostart)) {  /* no forward progress */
         zds->noForwardProgress ++;
         if (zds->noForwardProgress >= ZSTD_NO_FORWARD_PROGRESS_MAX) {
-            RETURN_ERROR_IF(op==oend, dstSize_tooSmall, "");
-            RETURN_ERROR_IF(ip==iend, srcSize_wrong, "");
+            RETURN_ERROR_IF(op==oend, noForwardProgress_destFull, "");
+            RETURN_ERROR_IF(ip==iend, noForwardProgress_inputEmpty, "");
             assert(0);
         }
     } else {
