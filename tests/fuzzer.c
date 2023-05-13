@@ -952,6 +952,25 @@ static int basicUnitTests(U32 const seed, double compressibility)
         ZSTD_freeCDict(cdict);
         ZSTD_freeCCtx(cctx);
     }
+    
+    DISPLAYLEVEL(3, "test%3i : maxBlockSize = 2K", testNb++);
+    {
+        ZSTD_CCtx* cctx = ZSTD_createCCtx();
+        ZSTD_DCtx* dctx = ZSTD_createDCtx();
+        CHECK_Z(ZSTD_CCtx_setParameter(cctx, ZSTD_c_checksumFlag, 1));
+        CHECK_Z(ZSTD_CCtx_setParameter(cctx, ZSTD_c_maxBlockSize, 2048));
+        CHECK_Z(ZSTD_DCtx_setParameter(dctx, ZSTD_d_maxBlockSize, 2048));
+
+        cSize = ZSTD_compress2(cctx, compressedBuffer, compressedBufferSize, CNBuffer, CNBuffSize);
+        CHECK_Z(cSize);
+        CHECK_Z(ZSTD_decompressDCtx(dctx, decodedBuffer, CNBuffSize, compressedBuffer, cSize));
+
+        CHECK_Z(ZSTD_DCtx_setParameter(dctx, ZSTD_d_maxBlockSize, 1024));
+        CHECK(ZSTD_isError(ZSTD_decompressDCtx(dctx, decodedBuffer, CNBuffSize, compressedBuffer, cSize)));
+
+        ZSTD_freeDCtx(dctx);
+        ZSTD_freeCCtx(cctx);
+    }
 
     DISPLAYLEVEL(3, "test%3i : ldm fill dict out-of-bounds check", testNb++);
     {
@@ -2422,7 +2441,7 @@ static int basicUnitTests(U32 const seed, double compressibility)
                                                  3663, 3662, 3661, 3660, 3660,
                                                  3660, 3660, 3660 };
             size_t const target_wdict_cSize[22+1] =  { 2830, 2896, 2893, 2820, 2940,
-                                                       2950, 2950, 2925, 2900, 2891,
+                                                       2950, 2950, 2925, 2900, 2892,
                                                        2910, 2910, 2910, 2780, 2775,
                                                        2765, 2760, 2755, 2754, 2753,
                                                        2753, 2753, 2753 };
