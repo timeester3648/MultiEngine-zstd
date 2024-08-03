@@ -159,23 +159,24 @@ typedef struct {
 UNUSED_ATTR static const rawSeqStore_t kNullRawSeqStore = {NULL, 0, 0, 0, 0};
 
 typedef struct {
-    int price;
-    U32 off;
-    U32 mlen;
-    U32 litlen;
-    U32 rep[ZSTD_REP_NUM];
+    int price;  /* price from beginning of segment to this position */
+    U32 off;    /* offset of previous match */
+    U32 mlen;   /* length of previous match */
+    U32 litlen; /* nb of literals since previous match */
+    U32 rep[ZSTD_REP_NUM];  /* offset history after previous match */
 } ZSTD_optimal_t;
 
 typedef enum { zop_dynamic=0, zop_predef } ZSTD_OptPrice_e;
 
+#define ZSTD_OPT_SIZE (ZSTD_OPT_NUM+3)
 typedef struct {
     /* All tables are allocated inside cctx->workspace by ZSTD_resetCCtx_internal() */
     unsigned* litFreq;           /* table of literals statistics, of size 256 */
     unsigned* litLengthFreq;     /* table of litLength statistics, of size (MaxLL+1) */
     unsigned* matchLengthFreq;   /* table of matchLength statistics, of size (MaxML+1) */
     unsigned* offCodeFreq;       /* table of offCode statistics, of size (MaxOff+1) */
-    ZSTD_match_t* matchTable;    /* list of found matches, of size ZSTD_OPT_NUM+1 */
-    ZSTD_optimal_t* priceTable;  /* All positions tracked by optimal parser, of size ZSTD_OPT_NUM+1 */
+    ZSTD_match_t* matchTable;    /* list of found matches, of size ZSTD_OPT_SIZE */
+    ZSTD_optimal_t* priceTable;  /* All positions tracked by optimal parser, of size ZSTD_OPT_SIZE */
 
     U32  litSum;                 /* nb of literals */
     U32  litLengthSum;           /* nb of litLength codes */
@@ -1314,6 +1315,13 @@ MEM_STATIC U32 ZSTD_getLowestPrefixIndex(const ZSTD_matchState_t* ms, U32 curr, 
     return matchLowest;
 }
 
+/* index_safety_check:
+ * intentional underflow : ensure repIndex isn't overlapping dict + prefix
+ * @return 1 if values are not overlapping,
+ * 0 otherwise */
+MEM_STATIC int ZSTD_index_overlap_check(const U32 prefixLowestIndex, const U32 repIndex) {
+    return ((U32)((prefixLowestIndex-1)  - repIndex) >= 3);
+}
 
 
 /* debug functions */
