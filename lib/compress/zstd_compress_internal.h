@@ -557,6 +557,25 @@ MEM_STATIC int ZSTD_cParam_withinBounds(ZSTD_cParameter cParam, int value)
     return 1;
 }
 
+/* ZSTD_selectAddr:
+ * @return index >= lowLimit ? candidate : backup,
+ * tries to force branchless codegen. */
+MEM_STATIC const BYTE*
+ZSTD_selectAddr(U32 index, U32 lowLimit, const BYTE* candidate, const BYTE* backup)
+{
+#if defined(__GNUC__) && defined(__x86_64__)
+    __asm__ (
+        "cmp %1, %2\n"
+        "cmova %3, %0\n"
+        : "+r"(candidate)
+        : "r"(index), "r"(lowLimit), "r"(backup)
+        );
+    return candidate;
+#else
+    return index >= lowLimit ? candidate : backup;
+#endif
+}
+
 /* ZSTD_noCompressBlock() :
  * Writes uncompressed block to dst buffer from given src.
  * Returns the size of the block */
@@ -918,11 +937,12 @@ MEM_STATIC U64 ZSTD_rollingHash_rotate(U64 hash, BYTE toRemove, BYTE toAdd, U64 
 /*-*************************************
 *  Round buffer management
 ***************************************/
-#if (ZSTD_WINDOWLOG_MAX_64 > 31)
-# error "ZSTD_WINDOWLOG_MAX is too large : would overflow ZSTD_CURRENT_MAX"
-#endif
-/* Max current allowed */
-#define ZSTD_CURRENT_MAX ((3U << 29) + (1U << ZSTD_WINDOWLOG_MAX))
+/* Max @current value allowed:
+ * In 32-bit mode: we want to avoid crossing the 2 GB limit,
+ *                 reducing risks of side effects in case of signed operations on indexes.
+ * In 64-bit mode: we want to ensure that adding the maximum job size (512 MB)
+ *                 doesn't overflow U32 index capacity (4 GB) */
+#define ZSTD_CURRENT_MAX (MEM_64bits() ? 3500U MB : 2000U MB)
 /* Maximum chunk size before overflow correction needs to be called again */
 #define ZSTD_CHUNKSIZE_MAX                                                     \
     ( ((U32)-1)                  /* Maximum ending current index */            \
@@ -1246,8 +1266,8 @@ MEM_STATIC void ZSTD_window_init(ZSTD_window_t* window) {
 MEM_STATIC
 ZSTD_ALLOW_POINTER_OVERFLOW_ATTR
 U32 ZSTD_window_update(ZSTD_window_t* window,
-                                  void const* src, size_t srcSize,
-                                  int forceNonContiguous)
+                 const void* src, size_t srcSize,
+                       int forceNonContiguous)
 {
     BYTE const* const ip = (BYTE const*)src;
     U32 contiguous = 1;
@@ -1274,8 +1294,9 @@ U32 ZSTD_window_update(ZSTD_window_t* window,
     /* if input and dictionary overlap : reduce dictionary (area presumed modified by input) */
     if ( (ip+srcSize > window->dictBase + window->lowLimit)
        & (ip < window->dictBase + window->dictLimit)) {
-        ptrdiff_t const highInputIdx = (ip + srcSize) - window->dictBase;
-        U32 const lowLimitMax = (highInputIdx > (ptrdiff_t)window->dictLimit) ? window->dictLimit : (U32)highInputIdx;
+        size_t const highInputIdx = (size_t)((ip + srcSize) - window->dictBase);
+        U32 const lowLimitMax = (highInputIdx > (size_t)window->dictLimit) ? window->dictLimit : (U32)highInputIdx;
+        assert(highInputIdx < UINT_MAX);
         window->lowLimit = lowLimitMax;
         DEBUGLOG(5, "Overlapping extDict and input : new lowLimit = %u", window->lowLimit);
     }
