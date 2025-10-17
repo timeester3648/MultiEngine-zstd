@@ -7,15 +7,29 @@ in order to make it easier to select or exclude features.
 
 #### Building
 
-`Makefile` script is provided, supporting [Makefile conventions](https://www.gnu.org/prep/standards/html_node/Makefile-Conventions.html#Makefile-Conventions),
+A `Makefile` script is provided, supporting [Makefile conventions](https://www.gnu.org/prep/standards/html_node/Makefile-Conventions.html#Makefile-Conventions),
 including commands variables, staged install, directory variables and standard targets.
 - `make` : generates both static and dynamic libraries
-- `make install` : install libraries and headers in target system directories
+- `make install` : install libraries, headers and pkg-config in local system directories
 
-`libzstd` default scope is pretty large, including compression, decompression, dictionary builder,
-and support for decoding legacy formats >= v0.5.0.
+`libzstd` default scope is extensive, including compression, decompression, dictionary builder,
+and support for decoding legacy formats >= v0.5.0 by default.
 The scope can be reduced on demand (see paragraph _modular build_).
 
+#### Multiarch Support
+
+For multiarch systems (like Debian/Ubuntu), libraries should be installed to architecture-specific directories.
+When creating packages for such systems, use the `LIBDIR` variable to specify the correct multiarch path:
+
+```bash
+# For x86_64 systems on Ubuntu/Debian:
+make install PREFIX=/usr LIBDIR=/usr/lib/x86_64-linux-gnu
+
+# For ARM64 systems on Ubuntu/Debian:
+make install PREFIX=/usr LIBDIR=/usr/lib/aarch64-linux-gnu
+```
+
+This will not only install the files in the correct directories, but also generate the correct paths for `pkg-config`.
 
 #### Multithreading support
 
@@ -149,6 +163,13 @@ The file structure is designed to make this selection manually achievable for an
   will expose the deprecated `ZSTDMT` API exposed by `zstdmt_compress.h` in
   the shared library, which is now hidden by default.
 
+- The build macro `STATIC_BMI2` can be set to 1 to force usage of `bmi2` instructions.
+  It is generally not necessary to set this build macro,
+  because `STATIC_BMI2` will be automatically set to 1
+  on detecting the presence of the corresponding instruction set in the compilation target.
+  It's nonetheless available as an optional manual toggle for better control,
+  and can also be used to forcefully disable `bmi2` instructions by setting it to 0.
+
 - The build macro `DYNAMIC_BMI2` can be set to 1 or 0 in order to generate binaries
   which can detect at runtime the presence of BMI2 instructions, and use them only if present.
   These instructions contribute to better performance, notably on the decoder side.
@@ -185,6 +206,11 @@ The file structure is designed to make this selection manually achievable for an
 - The C compiler macro `HUF_DISABLE_FAST_DECODE` disables the newer Huffman fast C
   and assembly decoding loops. You may want to use this macro if these loops are
   slower on your platform.
+
+- The macro `ZDICT_QSORT` can enforce selection of a specific sorting variant,
+  which is useful when autodetection fails, for example with older versions of `musl`.
+  For this scenario, it can be set as `ZDICT_QSORT=ZDICT_QSORT_C90`.
+  Other selectable suffixes are `_GNU`, `_APPLE`, `_MSVC` and `_C11`.
 
 #### Windows : using MinGW+MSYS to create DLL
 

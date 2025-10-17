@@ -30,6 +30,7 @@ libzstd_sources = [join_paths(zstd_rootdir, 'lib/common/entropy_common.c'),
   join_paths(zstd_rootdir, 'lib/compress/zstd_compress_literals.c'),
   join_paths(zstd_rootdir, 'lib/compress/zstd_compress_sequences.c'),
   join_paths(zstd_rootdir, 'lib/compress/zstd_compress_superblock.c'),
+  join_paths(zstd_rootdir, 'lib/compress/zstd_preSplit.c'),
   join_paths(zstd_rootdir, 'lib/compress/zstdmt_compress.c'),
   join_paths(zstd_rootdir, 'lib/compress/zstd_fast.c'),
   join_paths(zstd_rootdir, 'lib/compress/zstd_double_fast.c'),
@@ -125,6 +126,10 @@ libzstd = library('zstd',
 
 libzstd_dep = declare_dependency(link_with: libzstd,
   include_directories: join_paths(zstd_rootdir,'lib')) # Do not expose private headers
+
+if meson.version().version_compare('>=0.54.0')
+  meson.override_dependency('libzstd', libzstd_dep)
+endif
 
 # we link to both:
 # - the shared library (for public symbols)
